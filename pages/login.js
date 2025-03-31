@@ -7,11 +7,27 @@ export default function LoginPage() {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [message, setMessage] = useState("");
 
-  const onSubmit = (data) => {
-    console.log("Logging in with:", data);
-    setMessage("Login successful!");
-  };
-
+  const onSubmit = async (data) => {
+    const response = await fetch("http://127.0.0.1:8000/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  
+    const result = await response.json();
+    
+    if (response.ok) {
+      localStorage.setItem("user", JSON.stringify(result));
+      if (result.role === "teacher") {
+        router.push("/dashboard/teacher");
+      } else {
+        router.push("/dashboard/student");
+      }
+    } else {
+      setErrorMessage(result.detail);
+    }
+  };  
+  
   return (
     <div className="flex justify-center items-center h-screen bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-lg w-96">

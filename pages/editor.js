@@ -59,12 +59,13 @@ export default function CodeEditorPage() {
     editor.onDidChangeModelContent((event) => {
       for (const change of event.changes) {
         if (change.text.length > 1 || change.text.includes("\n")) {
+          
           // Likely a paste (multi-char or multi-line)
           const startLine = change.range.startLineNumber;
           const endLine = change.range.endLineNumber + (change.text.match(/\n/g)?.length || 0);
           const pastedText = change.text;
     
-          alert("Gotcha 🚨");
+          const source = prompt("You just pasted some code.\nPlease enter the source or citation:");
     
           fetch("http://127.0.0.1:8000/paste-log", {
             method: "POST",
@@ -73,6 +74,7 @@ export default function CodeEditorPage() {
               text: pastedText,
               startLine: startLine,
               endLine: endLine,
+              source: source || "NO SOURCE!"
             }),
           });
         }

@@ -35,53 +35,50 @@ export default function CodeEditorPage() {
     syncToBackend(value)
   };
 
-  const handleEditorMount = (editor, monaco) => {
-    // editor.onDidPaste(() => {
-    //   alert("Did you paste something?\nDon't forget to cite it!");
-      
-    //   const model = editor.getModel();
-    //   const selection = editor.getSelection();
-    //   const pastedText = editor.getModel().getValueInRange(selection);
+  const handleEditorMount = (editor) => {
+    let lastPasteRange = null;
 
-    //   const payload = {
-    //     text: pastedText,
-    //     startLine: selection.startLineNumber,
-    //     endLine: selection.endLineNumber,
-    //   };
-
-    //   // send to backend
-    //   fetch("http://127.0.0.1:8000/paste-log", {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify(payload),
-    //   }).catch((err) => console.error("Paste sync failed", err));
-    // });
+    // Track last change range
     editor.onDidChangeModelContent((event) => {
-      for (const change of event.changes) {
-        if (change.text.length > 1 || change.text.includes("\n")) {
-          
-          // Likely a paste (multi-char or multi-line)
-          const startLine = change.range.startLineNumber;
-          const endLine = change.range.endLineNumber + (change.text.match(/\n/g)?.length || 0);
-          const pastedText = change.text;
-    
-          const source = prompt("You just pasted some code.\nPlease enter the source or citation:");
-    
-          fetch("http://127.0.0.1:8000/paste-log", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              text: pastedText,
-              startLine: startLine,
-              endLine: endLine,
-              source: source || "NO SOURCE!"
-            }),
-          });
-        }
+      const fullRange = event.changes[0]?.range;
+      if (fullRange && event.changes.length === 1) {
+        lastPasteRange = fullRange;
       }
+    });
+
+    editor.onDidPaste(() => {
+      setTimeout(() => {
+        if (!lastPasteRange) return;
+    
+        const model = editor.getModel();
+    
+        const startLine = lastPasteRange.startLineNumber;
+        const endLine = lastPasteRange.endLineNumber + (model.getLineCount() > lastPasteRange.endLineNumber ? 0 : 1);
+    
+        // Grab actual pasted lines
+        const pastedLines = model.getLinesContent().slice(startLine - 1, endLine);
+        const pastedText = pastedLines.join("\n");
+    
+        if (!pastedText.trim()) return;
+    
+        const source = prompt("You just pasted some code. Please enter the source or citation:");
+    
+        fetch("http://127.0.0.1:8000/paste-log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: pastedText,
+            startLine: startLine,
+            endLine: endLine,
+            source: source || "No source provided",
+          }),
+        });
+    
+        lastPasteRange = null; // reset after sending
+      }, 50); // delay for Monaco to finish applying paste
     });    
   };
-
+  
   return (
     <div className="min-h-screen bg-black-100 p-4">
       <h1 className="text-2xl font-bold mb-4">Code Editor</h1>

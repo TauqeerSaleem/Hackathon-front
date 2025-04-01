@@ -1,5 +1,5 @@
-import LoginPage from "./editor";
+import Editor from "./editor";
 
 export default function Home() {
-  return <LoginPage />;
+  return <Editor />;
 }

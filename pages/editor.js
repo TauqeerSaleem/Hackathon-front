@@ -1,98 +1,55 @@
-import { useState } from "react";
-import Editor from "@monaco-editor/react";
-import debounce from "lodash.debounce";
+import { useState } from 'react';
 
-export default function CodeEditorPage() {
-  const [code, setCode] = useState("");
+export default function Editor() {
+  const [chatHistory, setChatHistory] = useState([]);
+  const [input, setInput] = useState('');
 
-  const syncToBackend = debounce(async (value) => {
-    try {
-      if (!value || typeof value !== "string") {
-        console.warn("Skipping sync: invalid value", value);
-        return;
-      }
-  
-      console.log("Syncing to backend with:", value);
-  
-      const res = await fetch("http://127.0.0.1:8000/update-doc", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: value }),
-      });
-  
-      if (!res.ok) {
-        console.error("Backend responded with error:", res.status);
-      }
-    } catch (error) {
-      console.error("Network sync failed:", error);
-    }
-  }, 500);
-  
-
-  const handleEditorChange = (value) => {
-    setCode(value);
-    if (!value) return;
-    syncToBackend(value)
-  };
-
-  const handleEditorMount = (editor) => {
-    let lastPasteRange = null;
-
-    // Track last change range
-    editor.onDidChangeModelContent((event) => {
-      const fullRange = event.changes[0]?.range;
-      if (fullRange && event.changes.length === 1) {
-        lastPasteRange = fullRange;
-      }
-    });
-
-    editor.onDidPaste(() => {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (input.trim()) {
+      setChatHistory([...chatHistory, { sender: 'user', message: input }]);
+      setInput('');
+      // Placeholder for handling chatbot response
       setTimeout(() => {
-        if (!lastPasteRange) return;
-    
-        const model = editor.getModel();
-    
-        const startLine = lastPasteRange.startLineNumber;
-        const endLine = lastPasteRange.endLineNumber + (model.getLineCount() > lastPasteRange.endLineNumber ? 0 : 1);
-    
-        // Grab actual pasted lines
-        const pastedLines = model.getLinesContent().slice(startLine - 1, endLine);
-        const pastedText = pastedLines.join("\n");
-    
-        if (!pastedText.trim()) return;
-    
-        const source = prompt("You just pasted some code. Please enter the source or citation:");
-    
-        fetch("http://127.0.0.1:8000/paste-log", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: pastedText,
-            startLine: startLine,
-            endLine: endLine,
-            source: source || "No source provided",
-          }),
-        });
-    
-        lastPasteRange = null; // reset after sending
-      }, 50); // delay for Monaco to finish applying paste
-    });    
+        setChatHistory((prev) => [
+          ...prev,
+          { sender: 'bot', message: 'This is a sample response.' },
+        ]);
+      }, 1000);
+    }
   };
-  
+
   return (
-    <div className="min-h-screen bg-black-100 p-4">
-      <h1 className="text-2xl font-bold mb-4">Code Editor</h1>
-      
-      <div className="rounded border border-gray-300 overflow-hidden">
-        <Editor
-          height="85vh"
-          defaultLanguage="python"
-          defaultValue={code}
-          onChange={handleEditorChange}
-          theme="vs-dark"
-          onMount={handleEditorMount}
-        />
+    <div className="flex flex-col h-screen p-4 bg-gray-50">
+      <div className="flex-1 overflow-auto border border-gray-300 rounded-md p-4 bg-white">
+        {chatHistory.map((chat, index) => (
+          <div
+            key={index}
+            className={`my-2 p-2 rounded ${
+              chat.sender === 'user'
+                ? 'bg-blue-500 text-white self-end'
+                : 'bg-gray-200 text-gray-800 self-start'
+            } inline-block max-w-[75%]`}
+          >
+            {chat.message}
+          </div>
+        ))}
       </div>
+      <form onSubmit={handleSubmit} className="mt-4 flex">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type your message here..."
+          className="flex-1 border border-gray-300 rounded-l-md p-2 focus:outline-none"
+        />
+        <button
+          type="submit"
+          className="bg-blue-500 text-white px-4 rounded-r-md hover:bg-blue-600"
+        >
+          Send
+        </button>
+      </form>
     </div>
   );
 }

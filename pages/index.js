@@ -1,5 +1,6 @@
-import Editor from "./editor";
+// index.js
+import ChatFront from './ChatFront';
 
 export default function Home() {
-  return <Editor />;
+  return <ChatFront />;
 }

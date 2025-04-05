@@ -1,22 +1,30 @@
 import { useState } from 'react';
 
-export default function Editor() {
+export default function ChatFront() {
   const [chatHistory, setChatHistory] = useState([]);
   const [input, setInput] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (input.trim()) {
-      setChatHistory([...chatHistory, { sender: 'user', message: input }]);
-      setInput('');
-      // Placeholder for handling chatbot response
-      setTimeout(() => {
-        setChatHistory((prev) => [
-          ...prev,
-          { sender: 'bot', message: 'This is a sample response.' },
-        ]);
-      }, 1000);
-    }
+    if (!input.trim()) return;
+
+    const newHistory = [...chatHistory, { sender: 'user', message: input }];
+    setChatHistory(newHistory);
+    setInput('');
+
+    // Call backend API
+    const res = await fetch('http://127.0.0.1:8000/chat/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: input }),
+    });
+
+    const data = await res.json();
+
+    setChatHistory((prev) => [
+      ...prev,
+      { sender: 'bot', message: data.response },
+    ]);
   };
 
   return (

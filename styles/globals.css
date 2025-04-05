@@ -134,3 +134,8 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Remove Next.js default footer logo */
+a[href*="vercel.com"] {
+  display: none !important;
+}

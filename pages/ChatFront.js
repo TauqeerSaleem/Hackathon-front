@@ -6,6 +6,9 @@ export default function ChatFront() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [level, setLevel] = useState('');
+  const [major, setMajor] = useState('');
+  const [year, setYear] = useState('');
+  const [careerGoal, setCareerGoal] = useState('');
   const [showOptions, setShowOptions] = useState(false);
   const [options, setOptions] = useState([]);
 
@@ -35,11 +38,33 @@ export default function ChatFront() {
       setShowOptions(true);
       setStep(2);
     } else if (step === 7) {
+      setCareerGoal(input);
       setChatHistory(prev => [
         ...prev,
         { sender: 'bot', message: `Awesome! I'll use this information to guide your course planning.` }
       ]);
       setStep(8);
+    } else if (step >= 8) {
+      // Send chat + context to backend
+      const res = await fetch("http://127.0.0.1:8000/chat/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: input,
+          name,
+          level,
+          major,
+          year,
+          careerGoal,
+          history: chatHistory.map((msg) => ({
+            role: msg.sender === 'user' ? 'user' : 'assistant',
+            content: msg.message
+          }))
+        })
+      });
+
+      const data = await res.json();
+      setChatHistory(prev => [...prev, { sender: 'bot', message: data.response }]);
     }
     setInput('');
   };
@@ -66,18 +91,20 @@ export default function ChatFront() {
       setShowOptions(true);
       setStep(3);
     } else if (step === 3) {
+      setMajor(option);
       setChatHistory(prev => [
         ...prev,
-        { sender: 'bot', message: `Great! What year are you in?` }
+        { sender: 'bot', message: `Great! What semester are we planning for?` }
       ]);
       if (level === 'Undergrad') {
-        setOptions(['Freshman', 'Sophomore', 'Junior', 'Senior']);
+        setOptions(['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th']);
       } else {
-        setOptions(['1st Year', '2nd Year']);
+        setOptions(['1st', '2nd', '3rd', '4th']);
       }
       setShowOptions(true);
       setStep(4);
     } else if (step === 4) {
+      setYear(option);
       setChatHistory(prev => [
         ...prev,
         { sender: 'bot', message: `Thanks for letting me know! Lastly, what is your career goal?` }
